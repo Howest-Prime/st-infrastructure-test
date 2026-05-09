@@ -1,5 +1,24 @@
 services:
+  movies-db.howestprime-test: 
+    image: postgres:16
+    container_name: movies-db.howestprime-test
+    restart : unless-stopped
+    env_file:
+    - ./.movies-db.howestprime.test.env
+    volumes:
+    - movies-db-data-test:/var/lib/postgresql/data
+    ports:
+    - "40221:5000"
+    networks:
+     - howestprime-test
 
 networks:
+  howestprime-test:
+    name: howestprime-test
+    ipam:
+      config:
+        - subnet: 10.22.0.0/16
 
 volumes:
+  movies-db-data-test:
+    name: movies-db-data-test
