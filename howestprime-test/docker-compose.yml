@@ -17,7 +17,7 @@ services:
       timeout: 3s
       retries: 5
       start_period: 40s
-      
+
   messagebroker.howestprime-test:
     image: cloudamqp/lavinmq:2.7.1
     container_name: messagebroker.howestprime-test
@@ -33,6 +33,21 @@ services:
       timeout: 3s
       retries: 5
       start_period: 40s
+
+  movies.howestprime.test:
+    image: howestprime-movies:latest
+    ports:
+      - "8000:8000"
+    container_name: howestprime-movies.test
+    env_file:
+      - ./.movies.howestprime.test.env
+    depends_on:
+      movies-db.howestprime-test:
+        condition: service_healthy
+      messagebroker.howestprime-test:
+        condition: service_healthy
+    networks:
+      - howestprime-test
 
 networks:
   howestprime-test:
