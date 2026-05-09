@@ -11,6 +11,12 @@ services:
     - "40221:5000"
     networks:
      - howestprime-test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -u test -d movie-test"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 40s
 
 networks:
   howestprime-test:
