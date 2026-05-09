@@ -12,7 +12,23 @@ services:
     networks:
      - howestprime-test
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -u test -d movie-test"]
+      test: pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB || exit 1  
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 40s
+      
+  messagebroker.howestprime-test:
+    image: cloudamqp/lavinmq:2.7.1
+    container_name: messagebroker.howestprime-test
+    restart : unless-stopped
+    ports:
+    - "40200:5672"
+    - "40201:15672"
+    networks:
+     - howestprime-test
+    healthcheck:
+      test: ["CMD-SHELL", "lavinmqctl status | grep -q 'Uptime: ' || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 5
