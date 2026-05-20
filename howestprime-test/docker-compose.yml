@@ -1,8 +1,9 @@
+
 services:
-  movies-db.howestprime-test: 
+  movies-db.howestprime.test: 
     image: postgres:16
     container_name: movies-db.howestprime-test
-    restart : unless-stopped
+    restart: unless-stopped
     env_file:
     - ./.movies-db.howestprime.test.env
     volumes:
@@ -17,11 +18,44 @@ services:
       timeout: 3s
       retries: 5
       start_period: 40s
+  ticketing-db.howestprime.test:
+    image: mongo:7
+    container_name: ticketing-db.howestprime-test
+    restart: unless-stopped
+    env_file:
+      - ./.ticketing-db.howestprime.test.env
+    ports:
+      - "40231:5000"
+    volumes:
+      - ticketing-db-data-test:/data/db
+    networks:
+      - howestprime-test
+    command: >
+      bash -c "
+        mongod --port 5000 --replSet rs0 --bind_ip_all &
+        until mongosh --port 5000 --eval 'print(\"waited for connection\")'
+        do
+          sleep 1
+        done
+        mongosh --port 5000 --eval '
+          rs.initiate({
+            _id: \"rs0\",
+            members: [{ _id: 0, host: \"ticketing-db.howestprime-test:5000\" }]
+          })
+        '
+        wait
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --port 5000 --eval 'db.adminCommand(\"ping\")'"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 40s
 
-  messagebroker.howestprime-test:
+  messagebroker.howestprime.test:
     image: cloudamqp/lavinmq:2.7.1
     container_name: messagebroker.howestprime-test
-    restart : unless-stopped
+    restart: unless-stopped
     ports:
     - "40200:5672"
     - "40201:15672"
@@ -36,15 +70,49 @@ services:
 
   movies.howestprime.test:
     image: howestprime-movies:latest
+    restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "40220:8000"
     container_name: howestprime-movies.test
     env_file:
       - ./.movies.howestprime.test.env
+    volumes:
+      - ../../st-microservice-movies-sumanadhikari-howest-1/config:/config
     depends_on:
-      movies-db.howestprime-test:
+      movies-db.howestprime.test:
         condition: service_healthy
-      messagebroker.howestprime-test:
+      messagebroker.howestprime.test:
+        condition: service_healthy
+    networks:
+      - howestprime-test
+
+  backoffice.howestprime.test:
+    image: howestprime-client-backoffice:latest
+    restart: unless-stopped
+    ports:
+      - 10210:8080
+    container_name: backoffice.howestprime.test
+    env_file:
+      - ./.client-backoffice.howestprime.test.env
+    depends_on:
+      movies.howestprime.test:
+        condition: service_started
+    networks:
+      - howestprime-test
+
+
+  ticketing.howestprime.test:
+    container_name: ticketing.howestprime.test
+    image: ticketing.howestprime.test:latest
+    restart: unless-stopped
+    ports:
+      - 40230:8080
+    env_file:
+      - ./.ticketing.howestprime.test.env
+    depends_on:
+      ticketing-db.howestprime.test:
+        condition: service_healthy
+      messagebroker.howestprime.test:
         condition: service_healthy
     networks:
       - howestprime-test
@@ -59,3 +127,5 @@ networks:
 volumes:
   movies-db-data-test:
     name: movies-db-data-test
+  ticketing-db-data-test:
+    name: ticketing-db-data-test
