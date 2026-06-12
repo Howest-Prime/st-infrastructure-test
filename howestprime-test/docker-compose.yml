@@ -37,12 +37,7 @@ services:
         do
           sleep 1
         done
-        mongosh --port 5000 --eval '
-          rs.initiate({
-            _id: \"rs0\",
-            members: [{ _id: 0, host: \"ticketing-db.howestprime-test:5000\" }]
-          })
-        '
+        mongosh --port 5000 --eval 'rs.initiate({ _id: \"rs0\", members: [{ _id: 0, host: \"ticketing-db.howestprime.test:5000\" }] })'
         wait
       "
     healthcheck:
@@ -103,10 +98,10 @@ services:
 
   ticketing.howestprime.test:
     container_name: ticketing.howestprime.test
-    image: ticketing.howestprime.test:latest
+    image: howestprime-ticketing:latest
     restart: unless-stopped
     ports:
-      - 40230:8080
+      - 40230:8000
     env_file:
       - ./.ticketing.howestprime.test.env
     depends_on:
@@ -114,6 +109,21 @@ services:
         condition: service_healthy
       messagebroker.howestprime.test:
         condition: service_healthy
+    networks:
+      - howestprime-test
+  webapp.howestprime.test:
+    image: hcr.technet.howest.be/howestprime-client-webapp:latest
+    restart: unless-stopped
+    ports:
+      - 10200:80
+    container_name: webapp.howestprime.test
+    env_file:
+      - ./.client-webapp.howestprime.test.env
+    depends_on:
+      movies.howestprime.test:
+        condition: service_started
+      ticketing.howestprime.test:
+        condition: service_started
     networks:
       - howestprime-test
 
